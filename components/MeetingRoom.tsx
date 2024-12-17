@@ -1,7 +1,6 @@
-/* eslint-disable tailwindcss/no-custom-classname */
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
 import {
@@ -14,7 +13,7 @@ import {
   useCallStateHooks,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, LayoutList, MessageSquare } from 'lucide-react';
+import { Users, LayoutList, MessageSquare, Captions, Globe } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -67,6 +66,23 @@ type Message = {
   photoURL: string | null;
 };
 
+function loadGoogleTranslate() {
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  script.async = true;
+
+  document.body.appendChild(script);
+
+  window.googleTranslateElementInit = function () {
+    new google.translate.TranslateElement(
+      { pageLanguage: 'en' },
+      'google_translate_element' // ID of the container where the widget will render
+    );
+  };
+}
+
+
 function ChatRoom() {
   const dummy = useRef<HTMLDivElement>(null);
   const messagesRef = collection(firestore, 'messages');
@@ -96,26 +112,27 @@ function ChatRoom() {
     });
 
     setFormValue('');
-    // dummy.current?.scrollIntoView({ behavior: 'smooth' });
+    dummy.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <>
-      <div className='main-div overflow-auto'>
-        {messages &&
-          messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)}
-        <div ref={dummy}></div>
-      </div>
+    <div className="main-div overflow-auto">
+      {messages &&
+        messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)}
+      <div ref={dummy}></div>
 
       <form onSubmit={sendMessage}>
-        <input className='send-input'
+        <input
+          className="send-input flex-1 rounded-md border p-2"
           value={formValue}
           onChange={(e) => setFormValue(e.target.value)}
           placeholder="Type your message..."
         />
-        <button className='send-btn' type="submit">Send</button>
+        <button className="send-btn ml-2 rounded-md bg-blue-500 px-4 py-2 text-white" type="submit">
+          Send
+        </button>
       </form>
-    </>
+    </div>
   );
 }
 
@@ -127,15 +144,12 @@ function ChatMessage({ message }: { message: Message }) {
 
   return (
     <div className={`message ${messageClass} flex items-start gap-3 p-2`}>
-      <img className='chat-img'
+      <img
+        className="chat-img"
         src={photoURL || 'https://api.adorable.io/avatars/23/default.png'}
         alt="User Avatar"
-        
       />
       <div>
-        <p className="text-sm font-semibold text-white">
-          {displayName || 'Unknown User'}
-        </p>
         <p className="text-sm text-gray-600 dark:text-gray-400">{text}</p>
       </div>
     </div>
@@ -174,7 +188,13 @@ const MeetingRoom = () => {
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(false);
+
   const [user] = useAuthState(auth);
+
+  useEffect(() => {
+    loadGoogleTranslate();
+  }, []);
 
   const { useCallCallingState } = useCallStateHooks();
   const callingState = useCallCallingState();
@@ -194,32 +214,27 @@ const MeetingRoom = () => {
 
   return (
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
+      <div id="google_translate_element" ></div>
+
       {!user ? (
-        <div className="flex justify-center items-center h-full">
+        <div className="flex h-full items-center justify-center">
           <LoginButton />
         </div>
       ) : (
         <>
-          <div className="relative flex size-full items-center justify-center">
-            <div className="flex size-full max-w-[1000px] items-center">
+          <div className="relative flex">
+            <div className={cn('transition-all duration-300', { showChat, showCaptions } ? 'w-[calc(100%-400px)]' : 'max-w-[1200px] w-full')}>
               <CallLayout />
             </div>
-            <div
-              className={cn('h-[calc(100vh-86px)] hidden ml-2', {
-                'show-block': showParticipants,
-              })}
-            >
-              <CallParticipantsList
-                onClose={() => setShowParticipants(false)}
-              />
+
+            <div className={cn('h-[calc(100vh-86px)] hidden ml-2', { 'show-block': showParticipants })}>
+              <CallParticipantsList onClose={() => setShowParticipants(false)} />
             </div>
+
             <div
               className={cn(
-                'absolute right-0 top-0 h-full w-[300px] bg-[#19232d] p-4 text-white transition-transform',
-                {
-                  'translate-x-0': showChat,
-                  'translate-x-full': !showChat,
-                },
+                'absolute right-0 top-0 h-full bg-[#19232d] p-4 text-white transition-transform',
+                showChat ? 'translate-x-0 w-[400px]' : 'translate-x-full w-0',
               )}
             >
               <div className="App">
@@ -229,10 +244,47 @@ const MeetingRoom = () => {
                 <ChatRoom />
               </div>
             </div>
+
+            <div
+              className={cn(
+                'absolute right-0 top-0 h-full bg-[#19232d] p-4 text-white transition-transform',
+                showCaptions ? 'translate-x-0 w-[400px]' : 'translate-x-full w-0',
+              )}
+            >
+              <div className="App">
+                <header>
+                  <h1>Captions Sign-Bridge</h1>
+                </header>
+                <ChatRoom />
+              </div>
+            </div>
           </div>
 
           <div className="fixed bottom-0 flex w-full items-center justify-center gap-5">
             <CallControls onLeave={() => router.push(`/`)} />
+
+            <button onClick={() => loadGoogleTranslate() }>
+              <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]" title='Translate'>
+                <Globe size={20} className="text-white" />
+              </div>
+            </button>
+
+            {/* New Dropdown Button */}
+            {/* <DropdownMenu>
+              <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
+                <Globe size={20} className="text-white" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="border-dark-1 bg-dark-1 text-white">
+                <DropdownMenuItem>
+                  Translate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="border-dark-1" />
+                <DropdownMenuItem>
+                  Another Option
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu> */}
+
             <DropdownMenu>
               <div className="flex items-center">
                 <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
@@ -240,22 +292,17 @@ const MeetingRoom = () => {
                 </DropdownMenuTrigger>
               </div>
               <DropdownMenuContent className="border-dark-1 bg-dark-1 text-white">
-                {['Grid', 'Speaker-Left', 'Speaker-Right'].map(
-                  (item, index) => (
-                    <div key={index}>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setLayout(item.toLowerCase() as CallLayoutType)
-                        }
-                      >
-                        {item}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="border-dark-1" />
-                    </div>
-                  ),
-                )}
+                {['Grid', 'Speaker-Left', 'Speaker-Right'].map((item, index) => (
+                  <div key={index}>
+                    <DropdownMenuItem onClick={() => setLayout(item.toLowerCase() as CallLayoutType)}>
+                      {item}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="border-dark-1" />
+                  </div>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
             <CallStatsButton />
             <button onClick={() => setShowParticipants((prev) => !prev)}>
               <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
@@ -265,6 +312,11 @@ const MeetingRoom = () => {
             <button onClick={() => setShowChat((prev) => !prev)}>
               <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
                 <MessageSquare size={20} className="text-white" />
+              </div>
+            </button>
+            <button onClick={() => setShowCaptions((prev) => !prev)}>
+              <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]" title="Captions">
+                <Captions size={20} className="text-white" />
               </div>
             </button>
             {!isPersonalRoom && <EndCallButton />}
