@@ -13,7 +13,13 @@ import {
   useCallStateHooks,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, LayoutList, MessageSquare, Captions, Globe } from 'lucide-react';
+import {
+  Users,
+  LayoutList,
+  MessageSquare,
+  Captions,
+  Globe,
+} from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -67,11 +73,11 @@ type Message = {
   photoURL: string | null;
 };
 
-
 function loadGoogleTranslate() {
   const script = document.createElement('script');
   script.type = 'text/javascript';
-  script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  script.src =
+    'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
   script.async = true;
 
   document.body.appendChild(script);
@@ -79,11 +85,10 @@ function loadGoogleTranslate() {
   window.googleTranslateElementInit = function () {
     new google.translate.TranslateElement(
       { pageLanguage: 'en' },
-      'google_translate_element' // ID of the container where the widget will render
+      'google_translate_element', // ID of the container where the widget will render
     );
   };
 }
-
 
 function ChatRoom() {
   const dummy = useRef<HTMLDivElement>(null);
@@ -130,7 +135,10 @@ function ChatRoom() {
           onChange={(e) => setFormValue(e.target.value)}
           placeholder="Type your message..."
         />
-        <button className="send-btn ml-2 rounded-md bg-blue-500 px-4 py-2 text-white" type="submit">
+        <button
+          className="send-btn ml-2 rounded-md bg-blue-500 px-4 py-2 text-white"
+          type="submit"
+        >
           Send
         </button>
       </form>
@@ -254,9 +262,11 @@ const MeetingRoom = () => {
       loadGoogleTranslate();
     } else {
       // Remove the Google Translate widget
-      const googleTranslateElement = document.querySelector("#google_translate_element");
+      const googleTranslateElement = document.querySelector(
+        '#google_translate_element',
+      );
       if (googleTranslateElement) {
-        googleTranslateElement.innerHTML = ""; // Clear the widget
+        googleTranslateElement.innerHTML = ''; // Clear the widget
       }
     }
     // Toggle the state
@@ -285,7 +295,7 @@ const MeetingRoom = () => {
 
   return (
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
-      <div id="google_translate_element" ></div>
+      <div id="google_translate_element"></div>
 
       {!user ? (
         <div className="flex h-full items-center justify-center">
@@ -294,12 +304,25 @@ const MeetingRoom = () => {
       ) : (
         <>
           <div className="relative flex">
-            <div className={cn('transition-all duration-300', { showChat, showCaptions } ? 'w-[calc(100%-400px)]' : 'max-w-[1200px] w-full')}>
+            <div
+              className={cn(
+                'transition-all duration-300',
+                showChat || showCaptions
+                  ? 'w-[calc(100%-400px)]'
+                  : 'max-w-[1200px] w-full',
+              )}
+            >
               <CallLayout />
             </div>
 
-            <div className={cn('h-[calc(100vh-86px)] hidden ml-2', { 'show-block': showParticipants })}>
-              <CallParticipantsList onClose={() => setShowParticipants(false)} />
+            <div
+              className={cn('h-[calc(100vh-86px)] hidden ml-2', {
+                'show-block': showParticipants,
+              })}
+            >
+              <CallParticipantsList
+                onClose={() => setShowParticipants(false)}
+              />
             </div>
 
             <div
@@ -319,14 +342,16 @@ const MeetingRoom = () => {
             <div
               className={cn(
                 'absolute right-0 top-0 h-full bg-[#19232d] p-4 text-white transition-transform',
-                showCaptions ? 'translate-x-0 w-[400px]' : 'translate-x-full w-0',
+                showCaptions
+                  ? 'translate-x-0 w-[400px]'
+                  : 'translate-x-full w-0',
               )}
             >
               <div className="App">
                 <header>
-                  <h1>Captions Sign-Bridge</h1>
+                  <h1 style={{backgroundColor : '#0b93f6',color:'white'}}>Captions Sign-Bridge</h1>
                 </header>
-                <CaptionRoom/>
+                <CaptionRoom />
               </div>
             </div>
           </div>
@@ -334,7 +359,7 @@ const MeetingRoom = () => {
           <div className="fixed bottom-0 flex w-full items-center justify-center gap-5">
             <CallControls onLeave={() => router.push(`/`)} />
 
-             <button onClick={toggleGoogleTranslate}>
+            <button onClick={toggleGoogleTranslate}>
               <div
                 className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]"
                 title={isTranslateVisible ? 'Hide Translate' : 'Show Translate'}
@@ -366,14 +391,20 @@ const MeetingRoom = () => {
                 </DropdownMenuTrigger>
               </div>
               <DropdownMenuContent className="border-dark-1 bg-dark-1 text-white">
-                {['Grid', 'Speaker-Left', 'Speaker-Right'].map((item, index) => (
-                  <div key={index}>
-                    <DropdownMenuItem onClick={() => setLayout(item.toLowerCase() as CallLayoutType)}>
-                      {item}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="border-dark-1" />
-                  </div>
-                ))}
+                {['Grid', 'Speaker-Left', 'Speaker-Right'].map(
+                  (item, index) => (
+                    <div key={index}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setLayout(item.toLowerCase() as CallLayoutType)
+                        }
+                      >
+                        {item}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="border-dark-1" />
+                    </div>
+                  ),
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -389,7 +420,10 @@ const MeetingRoom = () => {
               </div>
             </button>
             <button onClick={() => setShowCaptions((prev) => !prev)}>
-              <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]" title="Captions">
+              <div
+                className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]"
+                title="Captions"
+              >
                 <Captions size={20} className="text-white" />
               </div>
             </button>
