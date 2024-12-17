@@ -43,6 +43,7 @@ import {
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
+import CaptionRoom from './CaptionRoom';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -65,6 +66,7 @@ type Message = {
   uid: string;
   photoURL: string | null;
 };
+
 
 function loadGoogleTranslate() {
   const script = document.createElement('script');
@@ -136,6 +138,59 @@ function ChatRoom() {
   );
 }
 
+// function CaptionRoom() {
+//   const dummy = useRef<HTMLDivElement>(null);
+//   const messagesRef = collection(firestore, 'messages');
+//   const messagesQuery = query(messagesRef, orderBy('createdAt'));
+
+//   const [messages] = useCollectionData(messagesQuery, { idField: 'id' });
+//   const [formValue, setFormValue] = useState('');
+
+//   // If the user is not signed in, show a login message
+//   if (!auth.currentUser) {
+//     return <p>Please sign in to view and send messages.</p>;
+//   }
+
+//   const sendMessage = async (e: React.FormEvent) => {
+//     e.preventDefault();
+
+//     if (!auth.currentUser) return;
+
+//     const { uid, photoURL, displayName } = auth.currentUser;
+
+//     await addDoc(messagesRef, {
+//       text: formValue,
+//       createdAt: serverTimestamp(),
+//       uid,
+//       photoURL,
+//       displayName, // Add the display name
+//     });
+
+//     setFormValue('');
+//     dummy.current?.scrollIntoView({ behavior: 'smooth' });
+//   };
+
+//   return (
+//     <div className="main-div overflow-auto">
+//       {messages &&
+//         messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)}
+//       <div ref={dummy}></div>
+
+//       <form onSubmit={sendMessage}>
+//         <input
+//           className="send-input flex-1 rounded-md border p-2"
+//           value={formValue}
+//           onChange={(e) => setFormValue(e.target.value)}
+//           placeholder="Type your message..."
+//         />
+//         <button className="send-btn ml-2 rounded-md bg-blue-500 px-4 py-2 text-white" type="submit">
+//           Send
+//         </button>
+//       </form>
+//     </div>
+//   );
+// }
+
 function ChatMessage({ message }: { message: Message }) {
   const { text, uid, photoURL, displayName } = message;
 
@@ -189,8 +244,24 @@ const MeetingRoom = () => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showCaptions, setShowCaptions] = useState(false);
+  const [isTranslateVisible, setIsTranslateVisible] = useState(false);
 
   const [user] = useAuthState(auth);
+
+  const toggleGoogleTranslate = () => {
+    if (!isTranslateVisible) {
+      // Load Google Translate widget if not already visible
+      loadGoogleTranslate();
+    } else {
+      // Remove the Google Translate widget
+      const googleTranslateElement = document.querySelector("#google_translate_element");
+      if (googleTranslateElement) {
+        googleTranslateElement.innerHTML = ""; // Clear the widget
+      }
+    }
+    // Toggle the state
+    setIsTranslateVisible(!isTranslateVisible);
+  };
 
   useEffect(() => {
     loadGoogleTranslate();
@@ -255,7 +326,7 @@ const MeetingRoom = () => {
                 <header>
                   <h1>Captions Sign-Bridge</h1>
                 </header>
-                <ChatRoom />
+                <CaptionRoom/>
               </div>
             </div>
           </div>
@@ -263,8 +334,11 @@ const MeetingRoom = () => {
           <div className="fixed bottom-0 flex w-full items-center justify-center gap-5">
             <CallControls onLeave={() => router.push(`/`)} />
 
-            <button onClick={() => loadGoogleTranslate() }>
-              <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]" title='Translate'>
+             <button onClick={toggleGoogleTranslate}>
+              <div
+                className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]"
+                title={isTranslateVisible ? 'Hide Translate' : 'Show Translate'}
+              >
                 <Globe size={20} className="text-white" />
               </div>
             </button>
