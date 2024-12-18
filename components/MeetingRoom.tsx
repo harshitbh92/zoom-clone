@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable no-new */
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -46,6 +48,8 @@ import {
   query,
   serverTimestamp,
   addDoc,
+  DocumentData,
+  QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
@@ -67,11 +71,44 @@ const firestore = getFirestore(app);
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
+// type Message = {
+//   text: string;
+//   uid: string;
+//   photoURL: string | null;
+// };
+
 type Message = {
+  id?: string;
   text: string;
   uid: string;
-  photoURL: string | null;
+  photoURL: string;
+  createdAt?: any;
+  displayName?: string;
 };
+
+const messageConverter = {
+  toFirestore(message: Message): DocumentData {
+    return {
+      text: message.text,
+      uid: message.uid,
+      photoURL: message.photoURL,
+      createdAt: message.createdAt,
+      displayName: message.displayName,
+    };
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot): Message {
+    const data = snapshot.data();
+    return {
+      id: snapshot.id,
+      text: data.text,
+      uid: data.uid,
+      photoURL: data.photoURL,
+      createdAt: data.createdAt,
+      displayName: data.displayName,
+    };
+  }
+};
+
 
 function loadGoogleTranslate() {
   const script = document.createElement('script');
@@ -82,10 +119,10 @@ function loadGoogleTranslate() {
 
   document.body.appendChild(script);
 
-  window.googleTranslateElementInit = function () {
-    new google.translate.TranslateElement(
+  (window as any).googleTranslateElementInit = function () {
+    new (window as any).google.translate.TranslateElement(
       { pageLanguage: 'en' },
-      'google_translate_element', // ID of the container where the widget will render
+      'google_translate_element'
     );
   };
 }
@@ -93,9 +130,10 @@ function loadGoogleTranslate() {
 function ChatRoom() {
   const dummy = useRef<HTMLDivElement>(null);
   const messagesRef = collection(firestore, 'messages');
-  const messagesQuery = query(messagesRef, orderBy('createdAt'));
+  const messagesQuery = query(messagesRef, orderBy('createdAt')).withConverter(messageConverter);
 
-  const [messages] = useCollectionData(messagesQuery, { idField: 'id' });
+  // Type the messages returned by useCollectionData
+  const [messages] = useCollectionData(messagesQuery);
   const [formValue, setFormValue] = useState('');
 
   // If the user is not signed in, show a login message
@@ -145,6 +183,7 @@ function ChatRoom() {
     </div>
   );
 }
+
 
 // function CaptionRoom() {
 //   const dummy = useRef<HTMLDivElement>(null);
@@ -200,7 +239,7 @@ function ChatRoom() {
 // }
 
 function ChatMessage({ message }: { message: Message }) {
-  const { text, uid, photoURL, displayName } = message;
+  const { text, uid, photoURL } = message;
 
   const messageClass =
     auth.currentUser && uid === auth.currentUser.uid ? 'sent' : 'received';
