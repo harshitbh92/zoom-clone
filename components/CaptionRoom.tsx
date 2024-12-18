@@ -3,13 +3,15 @@ import './App.css';
 
 const CaptionRoom = () => {
   const [captions, setCaptions] = useState<string[]>([]);
+  const [signLanguageTranslations, setSignLanguageTranslations] = useState<string[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   const dummy = useRef<HTMLDivElement>(null); // Dummy ref for auto-scrolling
 
+  const signLanguageWords = ['Hello', 'thank you', 'no', 'byee', 'i love you', 'yes'];
+
   useEffect(() => {
-    // Check if the SpeechRecognition API is supported
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -18,7 +20,6 @@ const CaptionRoom = () => {
       return;
     }
 
-    // Initialize the recognition object
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -26,19 +27,21 @@ const CaptionRoom = () => {
 
     recognitionRef.current = recognition;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = async (event: SpeechRecognitionEvent) => {
       setCaptions((prevCaptions) => {
         const newCaptions = [...prevCaptions];
-    
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
-    
+
           if (event.results[i].isFinal) {
-            // Push only the final result to avoid duplicates
             newCaptions.push(transcript);
+
+            // Add translation for sign language
+            translateToSignLanguage(transcript);
           }
         }
-    
+
         return newCaptions;
       });
     };
@@ -60,10 +63,25 @@ const CaptionRoom = () => {
     };
   }, []);
 
-  // Scroll into view whenever captions are updated
   useEffect(() => {
     dummy.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [captions]);
+  }, [captions, signLanguageTranslations]);
+
+  const translateToSignLanguage = async (text: string) => {
+    try {
+      // Placeholder: Replace this with an actual API call
+      const response = await fakeSignLanguageTranslationAPI(text);
+
+      setSignLanguageTranslations((prevTranslations) => [...prevTranslations, response]);
+    } catch (error) {
+      console.error("Error translating to sign language:", error);
+    }
+  };
+
+  const fakeSignLanguageTranslationAPI = async (text: string) => {
+    // Simulate translation API response (replace with actual API integration)
+    return `Sign Translation for: "${text}"`; // Replace this with real data
+  };
 
   const startTranscription = () => {
     if (recognitionRef.current && !isTranscribing) {
@@ -79,20 +97,43 @@ const CaptionRoom = () => {
     }
   };
 
+  // Random word generation logic
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isTranscribing) {
+      intervalId = setInterval(() => {
+        const randomWord = signLanguageWords[Math.floor(Math.random() * signLanguageWords.length)];
+        setSignLanguageTranslations((prev) => [...prev, randomWord]);
+      }, 5000); // Generate every 5 seconds
+    } else if (intervalId) {
+      clearInterval(intervalId);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isTranscribing]);
+
   return (
-    <div className="caption-room" style={{ maxHeight: '500px', overflowY: 'auto'  }}>
-      <h1>Live Transcription</h1>
+    <div className="caption-room" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+      <h1>Live Transcription and Sign Language Translation</h1>
       <div className="captions">
         {captions.map((caption, index) => (
           <p key={index}>{caption}</p>
         ))}
-        {/* Dummy div for auto-scrolling */}
+        {/* Display Sign Language Translations */}
+        {signLanguageTranslations.map((translation, index) => (
+          <p key={`sign-${index}`} style={{ fontStyle: 'italic', color: 'blue' }}>
+            {translation}
+          </p>
+        ))}
         <div ref={dummy}></div>
       </div>
-      <div className="transcription_controls" style={{ display: 'flex', gap:10 }}>
+      <div className="transcription_controls" style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={startTranscription}
-          className='startTranscription'
+          className="startTranscription"
           disabled={isTranscribing}
           style={{
             backgroundColor: isTranscribing ? 'red' : 'green',
@@ -107,7 +148,7 @@ const CaptionRoom = () => {
         </button>
         <button
           onClick={stopTranscription}
-          className='startTranscription'
+          className="startTranscription"
           disabled={!isTranscribing}
           style={{
             backgroundColor: !isTranscribing ? 'red' : 'green',
